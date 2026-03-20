@@ -126,6 +126,8 @@ class NERModel(LightningModule):
             self.args.model.pretrained,
             config=self.lm_config,
         )
+        print(self.lang_model)
+        exit(1)
 
         # 라벨 수 검증
         assert self.data.num_labels > 0, f"Invalid num_labels: {self.data.num_labels}"

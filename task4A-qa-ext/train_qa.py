@@ -308,8 +308,12 @@ def main():
     if data_args.dataset_name is not None:
         # TODO Step 1-1:
         # Use load_dataset(...) to load a QA dataset directly from the Hugging Face Hub.
-        raise NotImplementedError(
-            "TODO Step 1-1: load the QA dataset from the Hugging Face Hub here."
+        raw_datasets = load_dataset(
+            data_args.dataset_name,
+            data_args.dataset_config_name,
+            cache_dir=model_args.cache_dir,
+            token=model_args.token,
+            trust_remote_code=model_args.trust_remote_code,
         )
     else:
         data_files = {}
@@ -341,8 +345,28 @@ def main():
     # config = AutoConfig.from_pretrained(...)
     # tokenizer = AutoTokenizer.from_pretrained(...)
     # model = AutoModelForQuestionAnswering.from_pretrained(...)
-    raise NotImplementedError(
-        "TODO Step 1-2: load the QA config, tokenizer, and model here."
+    config = AutoConfig.from_pretrained(
+        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        use_fast=True,
+        revision=model_args.model_revision,
+        token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+    model = AutoModelForQuestionAnswering.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,
     )
 
     # Tokenizer check: this script requires a fast tokenizer.
@@ -627,8 +651,16 @@ def main():
     # Use the provided support modules to connect post-processing, metrics, and the Trainer.
     # Initialize our Trainer
     # trainer = QuestionAnsweringTrainer(...)
-    raise NotImplementedError(
-        "TODO Step 2-1: connect QuestionAnsweringTrainer, post-processing, and metrics here."
+    trainer = QuestionAnsweringTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset if training_args.do_train else None,
+        eval_dataset=eval_dataset if training_args.do_eval else None,
+        eval_examples=eval_examples if training_args.do_eval else None,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+        post_process_function=post_processing_function,
+        compute_metrics=compute_metrics,
     )
 
     # Training
