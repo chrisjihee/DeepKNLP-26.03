@@ -218,11 +218,22 @@ class NERModel(LightningModule):
 
         # TODO Step 1-2:
         # Build the NER training dataset/dataloader here so tokenization and label batching stay visible in context.
-        # train_dataset = NERDataset(...)
-        # train_dataloader = DataLoader(...)
-        raise NotImplementedError(
-            "TODO Step 1-2: build the NER training dataset and dataloader in this block."
+        train_dataset = NERDataset("train", data=self.data, tokenizer=self.lm_tokenizer)
+        train_dataloader = DataLoader(
+            train_dataset,
+            sampler=RandomSampler(train_dataset),
+            num_workers=self.args.hardware.cpu_workers,
+            batch_size=self.args.hardware.train_batch,
+            collate_fn=self.data.encoded_examples_to_batch,
+            drop_last=False,
         )
+
+        self.fabric.print(f"Created train_dataset providing {len(train_dataset)} examples")
+        self.fabric.print(
+            f"Created train_dataloader providing {len(train_dataloader)} batches"
+        )
+
+        return train_dataloader
 
     def val_dataloader(self):
         """
@@ -297,14 +308,12 @@ class NERModel(LightningModule):
         """
         # TODO Step 2-1:
         # Run the forward pass here, ignore padded labels correctly, and compute token accuracy.
-        # inputs.pop("example_ids")
-        # outputs = self.lang_model(**inputs)
-        # labels = inputs["labels"]
-        # preds = outputs.logits.argmax(dim=-1)
-        # acc = accuracy(..., ignore_index=0)
-        raise NotImplementedError(
-            "TODO Step 2-1: implement the token-classification training step here."
-        )
+        inputs = dict(inputs)
+        inputs.pop("example_ids")
+        outputs = self.lang_model(**inputs)
+        labels = inputs["labels"]
+        preds = outputs.logits.argmax(dim=-1)
+        acc = accuracy(preds=preds, labels=labels, ignore_index=0)
 
         return {
             "loss": outputs.loss,  # 토큰 분류 손실
@@ -328,16 +337,14 @@ class NERModel(LightningModule):
         """
         # TODO Step 2-2:
         # Keep validation simple: remove example_ids, run the model, and collect only non-padding token labels.
-        # inputs.pop("example_ids")
-        # outputs = self.lang_model(**inputs)
-        # labels = inputs["labels"]
-        # preds = outputs.logits.argmax(dim=-1)
-        # valid_mask = labels != 0
-        # list_of_token_pred_ids = preds[valid_mask].tolist()
-        # list_of_token_label_ids = labels[valid_mask].tolist()
-        raise NotImplementedError(
-            "TODO Step 2-2: implement the token-level validation logic here."
-        )
+        inputs = dict(inputs)
+        inputs.pop("example_ids")
+        outputs = self.lang_model(**inputs)
+        labels = inputs["labels"]
+        preds = outputs.logits.argmax(dim=-1)
+        valid_mask = labels != 0
+        list_of_token_pred_ids = preds[valid_mask].tolist()
+        list_of_token_label_ids = labels[valid_mask].tolist()
         return {
             "loss": outputs.loss,
             "preds": list_of_token_pred_ids,
@@ -722,7 +729,7 @@ def train(
     learning_rate: float = typer.Option(default=5e-5, help="학습률"),
     random_seed: int = typer.Option(default=7, help="랜덤 시드"),
     saving_mode: str = typer.Option(
-        default="max val_F1e", help="모델 저장 기준 (NER은 entity F1 기준)"
+        default="max val_acc", help="모델 저장 기준 (NER은 entity F1 기준)"
     ),
     num_saving: int = typer.Option(default=1, help="저장할 모델 개수"),
     num_epochs: int = typer.Option(default=1, help="학습 에포크 수"),
