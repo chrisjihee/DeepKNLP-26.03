@@ -1,61 +1,17 @@
-# === Step 2 해답 ===
-# 수강생들이 완성해야 할 TODO 부분의 해답을 제공합니다.
+"""Step 2 in-place answer snippets for task1-cls/run_cls.py.
 
-"""
-Step 2 TODO 해답:
+Paste the following blocks into the matching TODO Step 2 locations.
 
-1. AdamW 옵티마이저 반환:
-   return AdamW(self.lang_model.parameters(), lr=self.args.learning.learning_rate)
+NSMCModel.training_step:
 
-2. 학습 데이터셋 생성:
-   train_dataset = ClassificationDataset(
-       "train", data=self.data, tokenizer=self.lm_tokenizer
-   )
+    outputs: SequenceClassifierOutput = self.lang_model(**inputs)
+    labels: torch.Tensor = inputs["labels"]
+    preds: torch.Tensor = outputs.logits.argmax(dim=-1)
+    acc: torch.Tensor = accuracy(preds=preds, labels=labels)
 
-3. 학습용 데이터로더 생성:
-   train_dataloader = DataLoader(
-       train_dataset,
-       sampler=RandomSampler(train_dataset, replacement=False),
-       num_workers=self.args.hardware.cpu_workers,
-       batch_size=self.args.hardware.train_batch,
-       collate_fn=data_collator,
-       drop_last=False,
-   )
+NSMCModel.validation_step:
 
-4. 검증 데이터셋 생성:
-   val_dataset = ClassificationDataset(
-       "valid", data=self.data, tokenizer=self.lm_tokenizer
-   )
-
-5. 검증용 데이터로더 생성:
-   val_dataloader = DataLoader(
-       val_dataset,
-       sampler=SequentialSampler(val_dataset),
-       num_workers=self.args.hardware.cpu_workers,
-       batch_size=self.args.hardware.infer_batch,
-       collate_fn=data_collator,
-       drop_last=False,
-   )
-
-6. 테스트 데이터셋 생성:
-   test_dataset = ClassificationDataset(
-       "test", data=self.data, tokenizer=self.lm_tokenizer
-   )
-
-7. 테스트용 데이터로더 생성:
-   test_dataloader = DataLoader(
-       test_dataset,
-       sampler=SequentialSampler(test_dataset),
-       num_workers=self.args.hardware.cpu_workers,
-       batch_size=self.args.hardware.infer_batch,
-       collate_fn=data_collator,
-       drop_last=False,
-   )
-
-핵심 개념:
-- ClassificationDataset: NSMC 데이터를 PyTorch 형식으로 변환
-- RandomSampler vs SequentialSampler: 학습 시 랜덤, 평가 시 순차
-- batch_size: 학습용은 train_batch, 추론용은 infer_batch
-- data_collator: 배치 내 샘플들의 길이를 맞춰주는 함수
-- num_workers: 데이터 로딩 병렬 처리 수
+    outputs: SequenceClassifierOutput = self.lang_model(**inputs)
+    labels: List[int] = inputs["labels"].tolist()
+    preds: List[int] = outputs.logits.argmax(dim=-1).tolist()
 """
