@@ -379,9 +379,74 @@ class NERModel(LightningModule):
         # TODO Step 3:
         # Complete the full NER inference flow in one place:
         # tokenize -> run the model -> decode token labels/probabilities -> build the web response dictionary.
-        raise NotImplementedError(
-            "TODO Step 3: implement the full NER inference flow here."
+        if text is None:
+            text = ""
+        if not str(text).strip():
+            return {
+                "text": text,
+                "tokens": [],
+                "labels": [],
+                "scores": [],
+                "predictions": [],
+            }
+
+        device = next(self.lang_model.parameters()).device
+        encoded = self.lm_tokenizer(
+            text,
+            return_tensors="pt",
+            return_offsets_mapping=True,
+            truncation=True,
+            padding="max_length",
+            max_length=self.args.model.seq_len,
         )
+        offset_mapping = encoded.pop("offset_mapping")[0]
+        encoded = {k: v.to(device) for k, v in encoded.items()}
+
+        outputs = self.lang_model(**encoded)
+        token_probs = torch.softmax(outputs.logits[0], dim=-1)
+        token_pred_ids = token_probs.argmax(dim=-1)
+        token_ids = encoded["input_ids"][0].tolist()
+        tokens = self.lm_tokenizer.convert_ids_to_tokens(token_ids)
+
+        token_results = []
+        token_texts = []
+        token_labels = []
+        token_scores = []
+        token_offsets = []
+        for idx, span in enumerate(offset_mapping):
+            if span is None:
+                continue
+            start, end = int(span[0]), int(span[1])
+            if start == end:
+                continue
+            label_id = int(token_pred_ids[idx].item())
+            label = self.id_to_label(label_id)
+            score = float(token_probs[idx, label_id].item())
+            token_text = text[start:end]
+            token_results.append(
+                {
+                    "index": idx,
+                    "token": tokens[idx],
+                    "text": token_text,
+                    "start": start,
+                    "end": end,
+                    "label": label,
+                    "score": round(score, 6),
+                }
+            )
+            token_texts.append(tokens[idx])
+            token_labels.append(label)
+            token_scores.append(round(score, 6))
+            token_offsets.append((start, end))
+
+        return {
+            "text": text,
+            "tokens": token_texts,
+            "offsets": token_offsets,
+            "labels": token_labels,
+            "scores": token_scores,
+            "predictions": token_results,
+        }
 
     def run_server(self, server: Flask, *args, **kwargs):
         """
@@ -693,7 +758,7 @@ def train(
         default="16-mixed", help="정밀도 (32-true, bf16-mixed, 16-mixed)"
     ),
     strategy: str = typer.Option(default="ddp", help="분산 전략"),
-    device: List[int] = typer.Option(default=[0], help="사용할 GPU 장치 번호들"),
+    device: List[int] = typer.Option(default=[4,5], help="사용할 GPU 장치 번호들"),
     # printing - 출력 설정
     print_rate_on_training: float = typer.Option(
         default=1 / 20, help="학습 중 출력 주기 (비율)"
