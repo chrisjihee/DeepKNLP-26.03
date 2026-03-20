@@ -108,15 +108,23 @@ class NERModel(LightningModule):
 
         # TODO Step 1-1:
         # Build the corpus, label maps, fast tokenizer, and pretrained token-classification model here.
-        # self.data = NERCorpus(args)
-        # self.labels = self.data.labels
-        # self._label_to_id = {...}
-        # self._id_to_label = {...}
-        # self.lm_config = AutoConfig.from_pretrained(...)
-        # self.lm_tokenizer = AutoTokenizer.from_pretrained(...)
-        # self.lang_model = AutoModelForTokenClassification.from_pretrained(...)
-        raise NotImplementedError(
-            "TODO Step 1-1: load the NER corpus, label maps, tokenizer, and pretrained model here."
+        self.data = NERCorpus(args)
+        self.labels = self.data.labels
+        self._label_to_id = {label: i for i, label in enumerate(self.labels)}
+        self._id_to_label = {i: label for i, label in enumerate(self.labels)}
+        self.lm_config = AutoConfig.from_pretrained(
+            self.args.model.pretrained,
+            num_labels=self.data.num_labels,
+            id2label=self._id_to_label,
+            label2id=self._label_to_id,
+        )
+        self.lm_tokenizer = AutoTokenizer.from_pretrained(
+            self.args.model.pretrained,
+            use_fast=True,
+        )
+        self.lang_model = AutoModelForTokenClassification.from_pretrained(
+            self.args.model.pretrained,
+            config=self.lm_config,
         )
 
         # 라벨 수 검증
