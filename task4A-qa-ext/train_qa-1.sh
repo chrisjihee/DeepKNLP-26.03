@@ -1,5 +1,5 @@
 OUTPUT_DIR=output/korquad/train_qa-by-kpfbert
-CUDA_VISIBLE_DEVICES=0 python task4A-qa-ext/train_qa.py \
+CUDA_VISIBLE_DEVICES=7 python task4A-qa-ext/train_qa.py \
   --train_file data/korquad/train-half.jsonl \
   --validation_file data/korquad/validation.jsonl \
   --model_name_or_path jinmang2/kpfbert \

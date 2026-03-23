@@ -36,13 +36,15 @@ class QAModel:
         self.num_beams = num_beams
         self.max_length = max_length
 
-        # Step 3-1: Load the tokenizer and the fine-tuned seq2seq QA model from the checkpoint path.
-        logger.info(f"Loading model from {pretrained}")
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(pretrained)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-        self.model.eval()
+        # TODO Step 3-1:
+        # Load the tokenizer and the fine-tuned seq2seq QA model from the checkpoint path.
+        # logger.info(f"Loading model from {pretrained}")
+        # self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
+        # self.model = AutoModelForSeq2SeqLM.from_pretrained(pretrained)
+        # self.model.eval()
+        raise NotImplementedError(
+            "TODO Step 3-1: load the tokenizer and seq2seq QA checkpoint here."
+        )
 
     def run_server(self, server: Flask, *args, **kwargs):
         """
@@ -60,40 +62,17 @@ class QAModel:
         if not context.strip():
             return {"question": question, "context": context, "answer": "(The context is empty.)"}
 
-        # Step 3-2: Build the single-example generative QA inference flow in place.
-        input_text = f"question: {question} context: {context}"
-        inputs = self.tokenizer(
-            input_text,
-            return_tensors="pt",
-            truncation=True,
-            padding=True,
+        # TODO Step 3-2:
+        # Build the single-example generative QA inference flow in place.
+        # input_text = f"question: {question} context: {context}"
+        # inputs = self.tokenizer(...)
+        # output_ids = self.model.generate(..., return_dict_in_generate=True, output_scores=True)
+        # answer = self.tokenizer.decode(...)
+        # token_probs = ...
+        # score = ...
+        raise NotImplementedError(
+            "TODO Step 3-2: implement seq2seq QA generation and answer scoring here."
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        with torch.no_grad():
-            output_ids = self.model.generate(
-                input_ids=inputs["input_ids"],
-                attention_mask=inputs["attention_mask"],
-                max_length=self.max_length,
-                num_beams=self.num_beams,
-                return_dict_in_generate=True,
-                output_scores=True,
-            )
-
-        answer = self.tokenizer.decode(output_ids.sequences[0], skip_special_tokens=True)
-
-        if output_ids.scores:
-            sequence = output_ids.sequences[0]
-            generated_token_ids = sequence[1 : 1 + len(output_ids.scores)]
-            log_probs = []
-            for step_logits, token_id in zip(output_ids.scores, generated_token_ids):
-                token_log_prob = F.log_softmax(step_logits[0], dim=-1)[token_id]
-                log_probs.append(token_log_prob)
-            score = float(torch.exp(torch.stack(log_probs).mean()).item()) if log_probs else 0.0
-        elif hasattr(output_ids, "sequences_scores") and output_ids.sequences_scores is not None:
-            score = float(torch.exp(output_ids.sequences_scores[0]).item())
-        else:
-            score = 0.0
 
         return {
             "question": question,

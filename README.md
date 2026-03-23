@@ -37,7 +37,7 @@ Transformer-based Korean Natural Language Processing
 
 ## Installation
 
-1. Install Miniforge
+1. Install uv(Universal Virtualenv)
     ```bash
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
@@ -49,19 +49,18 @@ Transformer-based Korean Natural Language Processing
     ```bash
     watch -d -n 3 nvidia-smi
     ```
-4. Create a new environment
+4. Create a new environment and activate it (MUST be activated)
     ```bash
     uv python install 3.12
     uv venv DeepKNLP-env --python 3.12 --python-preference only-managed
+    source DeepKNLP-env/bin/activate
     ```
 5. Install the required packages
     ```bash
-    source DeepKNLP-env/bin/activate  # MUST be activated
-    uv pip list; echo ==========; uv --version; echo ==========; which python; python --version
+    echo ==========; which python; python --version; echo ==========; uv pip list; echo ==========; uv --version;
     uv pip install -e . --extra-index-url https://download.pytorch.org/whl/cu128
     rm -rf transformers; git clone https://github.com/chrisjihee/transformers.git; uv pip install -U -e transformers
     rm -rf ratsnlp;      git clone https://github.com/chrisjihee/ratsnlp.git;      uv pip install -U -e ratsnlp
-    uv pip install chrisbase==0.5.8
     uv pip list | grep -E "torch|lightn|trans|accel|speed|flash|numpy|piece|chris|rats|prog|pydantic|tensor"
     ```
 6. Login to Hugging Face and link the cache
@@ -101,9 +100,6 @@ Transformer-based Korean Natural Language Processing
 * Question Answering (Extractive): https://ratsgo.github.io/nlpbook/docs/qa
     - `See task4A-qa-ext/README.md`
     - `python task4A-qa-ext/train_qa.py --help`
-    - `python task4A-qa-ext/train_qa.py --model_name_or_path klue/bert-base --train_file data/korquad/train-half.jsonl --validation_file data/korquad/validation.jsonl --output_dir output/korquad-lab --do_eval --max_eval_samples 4`
-    - `python task4A-qa-ext/train_qa.py --model_name_or_path klue/bert-base --train_file data/korquad/train-half.jsonl --validation_file data/korquad/validation.jsonl --output_dir output/korquad-lab --do_train --do_eval`
-    - `python task4A-qa-ext/serve_qa.py --pretrained "output/korquad/train_qa-by-kpfbert/checkpoint-*"`
     - `python task4A-qa-ext/infer_qa.py`
     - `bash task4A-qa-ext/train_qa-1.sh`
     - `bash task4A-qa-ext/train_qa-2.sh`
@@ -114,9 +110,6 @@ Transformer-based Korean Natural Language Processing
 * Question Answering (Generative):
     - `See task4B-qa-gen/README.md`
     - `python task4B-qa-gen/train_qa_seq2seq.py --help`
-    - `python task4B-qa-gen/train_qa_seq2seq.py --model_name_or_path paust/pko-t5-base --train_file data/korquad/train-half.jsonl --validation_file data/korquad/validation.jsonl --output_dir output/korquad-seq2seq-lab --do_eval --max_eval_samples 4 --predict_with_generate`
-    - `python task4B-qa-gen/train_qa_seq2seq.py --model_name_or_path paust/pko-t5-base --train_file data/korquad/train-half.jsonl --validation_file data/korquad/validation.jsonl --output_dir output/korquad-seq2seq-lab --do_train --do_eval --predict_with_generate`
-    - `python task4B-qa-gen/serve_qa_seq2seq.py --pretrained "output/korquad/train_qa_by-pkot5-at-dev0/checkpoint-*"`
     - `python task4B-qa-gen/infer_qa_seq2seq.py`
     - `bash task4B-qa-gen/train_qa_seq2seq-1.sh`
     - `bash task4B-qa-gen/train_qa_seq2seq-2.sh`

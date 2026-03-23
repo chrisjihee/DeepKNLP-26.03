@@ -38,10 +38,13 @@ class QAModel(LightningModule):
 
         # TODO Step 3-1:
         # Load the tokenizer and the fine-tuned extractive QA model from the checkpoint path.
-        logger.info(f"Loading model from {pretrained}")
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        self.model = AutoModelForQuestionAnswering.from_pretrained(pretrained)
-        self.model.eval()
+        # logger.info(f"Loading model from {pretrained}")
+        # self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
+        # self.model = AutoModelForQuestionAnswering.from_pretrained(pretrained)
+        # self.model.eval()
+        raise NotImplementedError(
+            "TODO Step 3-1: load the tokenizer and extractive QA checkpoint here."
+        )
 
     def run_server(self, server: Flask, *args, **kwargs):
         """
@@ -61,33 +64,18 @@ class QAModel(LightningModule):
 
         # TODO Step 3-2:
         # Build the single-example extractive QA inference flow in place.
-        device = next(self.model.parameters()).device
-        inputs = self.tokenizer.encode_plus(
-            question,
-            context,
-            return_tensors="pt",
-            truncation=True,
-            padding=True,
+        # inputs = self.tokenizer.encode_plus(...)
+        # outputs = self.model(**inputs)
+        # start_logits = outputs.start_logits
+        # end_logits = outputs.end_logits
+        # start_index = torch.argmax(start_logits)
+        # end_index = torch.argmax(end_logits)
+        # predict_answer_tokens = inputs["input_ids"][0, start_index : end_index + 1]
+        # answer = self.tokenizer.decode(predict_answer_tokens)
+        # score = ...
+        raise NotImplementedError(
+            "TODO Step 3-2: implement extractive QA inference and answer scoring here."
         )
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-
-        start_logits = outputs.start_logits[0]
-        end_logits = outputs.end_logits[0]
-        start_index = int(torch.argmax(start_logits).item())
-        end_index = int(torch.argmax(end_logits).item())
-        if end_index < start_index:
-            end_index = start_index
-
-        predict_answer_tokens = inputs["input_ids"][0, start_index: end_index + 1]
-        answer = self.tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-        if self.normalized:
-            start_probs = F.softmax(start_logits, dim=-1)
-            end_probs = F.softmax(end_logits, dim=-1)
-            score = float((start_probs[start_index] * end_probs[end_index]).item())
-        else:
-            score = float((start_logits[start_index] + end_logits[end_index]).item())
 
         return {
             "question": question,

@@ -108,26 +108,16 @@ class NERModel(LightningModule):
 
         # TODO Step 1-1:
         # Build the corpus, label maps, fast tokenizer, and pretrained token-classification model here.
-        self.data = NERCorpus(args)
-        self.labels = self.data.labels
-        self._label_to_id = {label: i for i, label in enumerate(self.labels)}
-        self._id_to_label = {i: label for i, label in enumerate(self.labels)}
-        self.lm_config = AutoConfig.from_pretrained(
-            self.args.model.pretrained,
-            num_labels=self.data.num_labels,
-            id2label=self._id_to_label,
-            label2id=self._label_to_id,
+        # self.data = NERCorpus(args)
+        # self.labels = self.data.labels
+        # self._label_to_id = {...}
+        # self._id_to_label = {...}
+        # self.lm_config = AutoConfig.from_pretrained(...)
+        # self.lm_tokenizer = AutoTokenizer.from_pretrained(...)
+        # self.lang_model = AutoModelForTokenClassification.from_pretrained(...)
+        raise NotImplementedError(
+            "TODO Step 1-1: load the NER corpus, label maps, tokenizer, and pretrained model here."
         )
-        self.lm_tokenizer = AutoTokenizer.from_pretrained(
-            self.args.model.pretrained,
-            use_fast=True,
-        )
-        self.lang_model = AutoModelForTokenClassification.from_pretrained(
-            self.args.model.pretrained,
-            config=self.lm_config,
-        )
-        print(self.lang_model)
-        exit(1)
 
         # 라벨 수 검증
         assert self.data.num_labels > 0, f"Invalid num_labels: {self.data.num_labels}"
@@ -220,22 +210,11 @@ class NERModel(LightningModule):
 
         # TODO Step 1-2:
         # Build the NER training dataset/dataloader here so tokenization and label batching stay visible in context.
-        train_dataset = NERDataset("train", data=self.data, tokenizer=self.lm_tokenizer)
-        train_dataloader = DataLoader(
-            train_dataset,
-            sampler=RandomSampler(train_dataset),
-            num_workers=self.args.hardware.cpu_workers,
-            batch_size=self.args.hardware.train_batch,
-            collate_fn=self.data.encoded_examples_to_batch,
-            drop_last=False,
+        # train_dataset = NERDataset(...)
+        # train_dataloader = DataLoader(...)
+        raise NotImplementedError(
+            "TODO Step 1-2: build the NER training dataset and dataloader in this block."
         )
-
-        self.fabric.print(f"Created train_dataset providing {len(train_dataset)} examples")
-        self.fabric.print(
-            f"Created train_dataloader providing {len(train_dataloader)} batches"
-        )
-
-        return train_dataloader
 
     def val_dataloader(self):
         """
@@ -310,12 +289,14 @@ class NERModel(LightningModule):
         """
         # TODO Step 2-1:
         # Run the forward pass here, ignore padded labels correctly, and compute token accuracy.
-        inputs = dict(inputs)
-        inputs.pop("example_ids")
-        outputs = self.lang_model(**inputs)
-        labels = inputs["labels"]
-        preds = outputs.logits.argmax(dim=-1)
-        acc = accuracy(preds=preds, labels=labels, ignore_index=0)
+        # inputs.pop("example_ids")
+        # outputs = self.lang_model(**inputs)
+        # labels = inputs["labels"]
+        # preds = outputs.logits.argmax(dim=-1)
+        # acc = accuracy(..., ignore_index=0)
+        raise NotImplementedError(
+            "TODO Step 2-1: implement the token-classification training step here."
+        )
 
         return {
             "loss": outputs.loss,  # 토큰 분류 손실
@@ -339,14 +320,16 @@ class NERModel(LightningModule):
         """
         # TODO Step 2-2:
         # Keep validation simple: remove example_ids, run the model, and collect only non-padding token labels.
-        inputs = dict(inputs)
-        inputs.pop("example_ids")
-        outputs = self.lang_model(**inputs)
-        labels = inputs["labels"]
-        preds = outputs.logits.argmax(dim=-1)
-        valid_mask = labels != 0
-        list_of_token_pred_ids = preds[valid_mask].tolist()
-        list_of_token_label_ids = labels[valid_mask].tolist()
+        # inputs.pop("example_ids")
+        # outputs = self.lang_model(**inputs)
+        # labels = inputs["labels"]
+        # preds = outputs.logits.argmax(dim=-1)
+        # valid_mask = labels != 0
+        # list_of_token_pred_ids = preds[valid_mask].tolist()
+        # list_of_token_label_ids = labels[valid_mask].tolist()
+        raise NotImplementedError(
+            "TODO Step 2-2: implement the token-level validation logic here."
+        )
         return {
             "loss": outputs.loss,
             "preds": list_of_token_pred_ids,
@@ -381,74 +364,9 @@ class NERModel(LightningModule):
         # TODO Step 3:
         # Complete the full NER inference flow in one place:
         # tokenize -> run the model -> decode token labels/probabilities -> build the web response dictionary.
-        if text is None:
-            text = ""
-        if not str(text).strip():
-            return {
-                "text": text,
-                "tokens": [],
-                "labels": [],
-                "scores": [],
-                "predictions": [],
-            }
-
-        device = next(self.lang_model.parameters()).device
-        encoded = self.lm_tokenizer(
-            text,
-            return_tensors="pt",
-            return_offsets_mapping=True,
-            truncation=True,
-            padding="max_length",
-            max_length=self.args.model.seq_len,
+        raise NotImplementedError(
+            "TODO Step 3: implement the full NER inference flow here."
         )
-        offset_mapping = encoded.pop("offset_mapping")[0]
-        encoded = {k: v.to(device) for k, v in encoded.items()}
-
-        outputs = self.lang_model(**encoded)
-        token_probs = torch.softmax(outputs.logits[0], dim=-1)
-        token_pred_ids = token_probs.argmax(dim=-1)
-        token_ids = encoded["input_ids"][0].tolist()
-        tokens = self.lm_tokenizer.convert_ids_to_tokens(token_ids)
-
-        token_results = []
-        token_texts = []
-        token_labels = []
-        token_scores = []
-        token_offsets = []
-        for idx, span in enumerate(offset_mapping):
-            if span is None:
-                continue
-            start, end = int(span[0]), int(span[1])
-            if start == end:
-                continue
-            label_id = int(token_pred_ids[idx].item())
-            label = self.id_to_label(label_id)
-            score = float(token_probs[idx, label_id].item())
-            token_text = text[start:end]
-            token_results.append(
-                {
-                    "index": idx,
-                    "token": tokens[idx],
-                    "text": token_text,
-                    "start": start,
-                    "end": end,
-                    "label": label,
-                    "score": round(score, 6),
-                }
-            )
-            token_texts.append(tokens[idx])
-            token_labels.append(label)
-            token_scores.append(round(score, 6))
-            token_offsets.append((start, end))
-
-        return {
-            "text": text,
-            "tokens": token_texts,
-            "offsets": token_offsets,
-            "labels": token_labels,
-            "scores": token_scores,
-            "predictions": token_results,
-        }
 
     def run_server(self, server: Flask, *args, **kwargs):
         """
@@ -760,7 +678,7 @@ def train(
         default="16-mixed", help="정밀도 (32-true, bf16-mixed, 16-mixed)"
     ),
     strategy: str = typer.Option(default="ddp", help="분산 전략"),
-    device: List[int] = typer.Option(default=[4,5], help="사용할 GPU 장치 번호들"),
+    device: List[int] = typer.Option(default=[0], help="사용할 GPU 장치 번호들"),
     # printing - 출력 설정
     print_rate_on_training: float = typer.Option(
         default=1 / 20, help="학습 중 출력 주기 (비율)"
@@ -796,7 +714,7 @@ def train(
     learning_rate: float = typer.Option(default=5e-5, help="학습률"),
     random_seed: int = typer.Option(default=7, help="랜덤 시드"),
     saving_mode: str = typer.Option(
-        default="max val_acc", help="모델 저장 기준 (NER은 entity F1 기준)"
+        default="max val_F1e", help="모델 저장 기준 (NER은 entity F1 기준)"
     ),
     num_saving: int = typer.Option(default=1, help="저장할 모델 개수"),
     num_epochs: int = typer.Option(default=1, help="학습 에포크 수"),

@@ -278,7 +278,8 @@ question_answering_column_name_mapping = {
 
 
 def main():
-    # Step 1: Read this file as an adapted Hugging Face example and identify the argument, dataset, tokenizer, and model flow.
+    # TODO Step 1:
+    # Read this file as an adapted Hugging Face example and identify the argument, dataset, tokenizer, and model flow.
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -338,7 +339,8 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Step 1: Complete the dataset loading and preprocessing path, including question-context formatting for Korean QA.
+    # TODO Step 1:
+    # Complete the dataset loading and preprocessing path, including question-context formatting for Korean QA.
     # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
     # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
     # (the dataset will be downloaded automatically from the datasets Hub).
@@ -349,13 +351,10 @@ def main():
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
     if data_args.dataset_name is not None:
-        # Step 1-1: Use load_dataset(...) to load a seq2seq QA dataset directly from the Hugging Face Hub.
-        raw_datasets = load_dataset(
-            data_args.dataset_name,
-            data_args.dataset_config_name,
-            cache_dir=model_args.cache_dir,
-            token=model_args.token,
-            trust_remote_code=model_args.trust_remote_code,
+        # TODO Step 1-1:
+        # Use load_dataset(...) to load a seq2seq QA dataset directly from the Hugging Face Hub.
+        raise NotImplementedError(
+            "TODO Step 1-1: load the seq2seq QA dataset from the Hugging Face Hub here."
         )
     else:
         data_files = {}
@@ -387,28 +386,8 @@ def main():
     # config = AutoConfig.from_pretrained(...)
     # tokenizer = AutoTokenizer.from_pretrained(...)
     # model = AutoModelForSeq2SeqLM.from_pretrained(...)
-    config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        token=model_args.token,
-        trust_remote_code=model_args.trust_remote_code,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        token=model_args.token,
-        trust_remote_code=model_args.trust_remote_code,
-    )
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_args.model_name_or_path,
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        token=model_args.token,
-        trust_remote_code=model_args.trust_remote_code,
+    raise NotImplementedError(
+        "TODO Step 1-2: load the seq2seq config, tokenizer, and model here."
     )
 
     # We resize the embeddings only when necessary to avoid index errors. If you are creating a model from scratch
@@ -674,27 +653,16 @@ def main():
         references = [{"id": ex["id"], "answers": ex[answer_column]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
-    # Step 2: Use the provided trainer module to connect generation outputs, post-processing, and metrics.
+    # TODO Step 2:
+    # Use the provided trainer module to connect generation outputs, post-processing, and metrics.
     # Initialize our Trainer
     # trainer = QuestionAnsweringSeq2SeqTrainer(...)
-    training_args.predict_with_generate = True
-    if training_args.generation_max_length is None:
-        training_args.generation_max_length = data_args.val_max_answer_length
-    if training_args.generation_num_beams is None and data_args.num_beams is not None:
-        training_args.generation_num_beams = data_args.num_beams
-    trainer = QuestionAnsweringSeq2SeqTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        eval_examples=eval_examples if training_args.do_eval else None,
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics,
-        post_process_function=post_processing_function,
+    raise NotImplementedError(
+        "TODO Step 2-1: connect the seq2seq trainer, generation metrics, and post-processing here."
     )
 
-    # Step 2: Run fine-tuning with predict_with_generate enabled when you want generation-based evaluation.
+    # TODO Step 2:
+    # Run fine-tuning with predict_with_generate enabled when you want generation-based evaluation.
     # Training
     if training_args.do_train:
         checkpoint = None
@@ -711,7 +679,8 @@ def main():
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
-    # Step 2: Run evaluation and inspect the saved eval_predictions.json output.
+    # TODO Step 2:
+    # Run evaluation and inspect the saved eval_predictions.json output.
     # Evaluation
     results = {}
     max_length = (
